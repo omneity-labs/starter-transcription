@@ -1,5 +1,7 @@
 import argparse
-import time
+import os
+from sawalign import Sawalign
+from daktilo import Daktilo
 from pathlib import Path
 from client import Sawalni
 from translation import translate_text, translate_srt
@@ -29,16 +31,12 @@ if args.audio.stat().st_size > 128 * 1024 * 1024:
 client = Sawalni()
 if args.mode == "align" and not args.text:
     parser.error("align requires --text transcript.txt")
-if args.text and args.text.stat().st_size > 1024 * 1024:
-    parser.error("Transcript exceeds1MiB")
+if args.text and args.text.stat().st_size > 1_000_000:
+    parser.error("Transcript exceeds 1,000,000 UTF-8 bytes")
 text = args.text.read_text(encoding="utf-8") if args.text else ""
 if args.mode != "align":
-    result = client.request(
-        "POST",
-        "speech/transcribe",
-        files={"audio": (args.audio.name, args.audio.read_bytes())},
-        data={"model": "daktilo"},
-    ).json()
+    with Daktilo(base_url=os.getenv("SAWALNI_BASE_URL", "https://api.sawalni.com/v1")) as transcriber:
+        result = transcriber.transcribe(args.audio)
     text = result.get("text")
     if not isinstance(text, str) or not text.strip():
         raise ValueError("Transcription returned no text")
@@ -56,27 +54,12 @@ if args.mode in ["transcribe", "translate"] and args.target:
 if args.mode in ["align", "subtitles"]:
     if not text.strip():
         raise ValueError("No transcript to align")
-    job = client.request(
-        "POST",
-        "speech/align",
-        files={"audio": (args.audio.name, args.audio.read_bytes())},
-        data={"text": text},
-    ).json()["job_id"]
-    deadline = time.monotonic() + 600
-    while time.monotonic() < deadline:
-        status = client.request("GET", f"speech/align/job/{job}").json()
-        print(status["status"], status.get("step", ""))
-        if status["status"] == "done":
-            srt = client.request("GET", f"speech/align/job/{job}/srt").text
-            args.output.write_text(srt, encoding="utf-8")
-            if args.target:
-                translated = translate_srt(client, srt, args.source, args.target)
-                (args.translation_output or Path("translated.srt")).write_text(
-                    translated, encoding="utf-8"
-                )
-            break
-        if status["status"] in ["error", "failed", "cancelled"]:
-            raise RuntimeError("Alignment failed")
-        time.sleep(2)
-    else:
-        raise TimeoutError(f"Alignment timed out; resume polling job {job}")
+    with Sawalign(base_url=os.getenv("SAWALNI_BASE_URL", "https://api.sawalni.com/v1")) as aligner:
+        job = aligner.submit(args.audio, text)
+        print("Alignment job:", job["job_id"], flush=True)
+        aligner.wait(job["job_id"])
+        srt = aligner.srt(job["job_id"])
+    args.output.write_text(srt, encoding="utf-8")
+    if args.target:
+        translated = translate_srt(client, srt, args.source, args.target)
+        (args.translation_output or Path("translated.srt")).write_text(translated, encoding="utf-8")

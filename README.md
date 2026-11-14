@@ -1,8 +1,27 @@
-# Audio recording → transcript → subtitles
+# Timed captions with Sawalign
 
-Python and TypeScript examples for [Sawalni API](https://api.sawalni.com). Daktilo recognizes the words in an audio recording. Sawalign places a transcript against that audio and exports timed subtitles.
+Python uses [Daktilo](https://pypi.org/project/daktilo/) for transcription and [Sawalign](https://pypi.org/project/sawalign/) for alignment. TypeScript calls the same endpoints directly. Both use [Sawalni API](https://api.sawalni.com). Daktilo recognizes the words in an audio recording. Sawalign places a transcript against that audio and exports timed subtitles.
+
+```sh
+pip install sawalign
+```
+
+If you already have a reviewed transcript:
+
+```sh
+export SAWALNI_API_KEY="your-key"
+sawalign align interview.wav --text transcript.txt --output captions.srt
+```
+
+## Languages and scripts
+
+**100+ core languages, with extended compatibility across 400+ languages.** Built on [Sawtone](https://www.omneitylabs.com/models/sawtone), Sawalign works across languages and scripts, including Moroccan Arabic (Darija) and Amazigh, including Tachelhit. Workflows can span Arabic, Latin and Tifinagh scripts.
+
+Use a transcript that matches the speech, including language switches. For Latin-script Darija (often called Arabizi), keep spelling consistent and review the resulting word timings. There is no need to translate it into English. Alignment quality can vary by language, accent and audio quality, particularly beyond the core languages.
 
 ## Python
+
+This starter pins `daktilo==0.1.1` and `sawalign==0.1.2`.
 
 Use Python 3.11+ and your own audio recording:
 
@@ -41,7 +60,7 @@ Both entry points accept your file paths. `SAWALNI_API_KEY` comes from the envir
 
 ![Transcription and subtitle workflow](docs/architecture.svg)
 
-The transcribe command sends audio to `POST /v1/speech/transcribe` with `model=daktilo`. The align command sends audio and text to `POST /v1/speech/align`, polls the returned job, and downloads SRT when it is done. Credentials stay in your terminal or server process.
+The Python transcribe command uses `Daktilo.transcribe()`. It sends audio to `POST /v1/speech/transcribe` with `model=daktilo`. The Python align command uses `Sawalign.submit()`, `wait()` and `srt()`. TypeScript uses direct HTTP calls. Both send audio and text to `POST /v1/speech/align`, polls the returned job, and downloads SRT when it is done. Credentials stay in your terminal or server process.
 
 ## Try the same example as the walkthrough
 
@@ -71,7 +90,7 @@ For translated text or captions, add `--source ary_Arab --target eng_Latn` to th
 - `python/src/client.py`, `typescript/src/client.ts`: HTTP transport.
 - `examples/demo/`: saved demonstration.
 
-Requests are not automatically retried. Alignment polling stops after ten minutes and reports the job ID. HTTP errors, failed jobs, empty or truncated transcripts stop the workflow. Audio inputs are limited to 128 MiB; transcript inputs to 1 MiB.
+Requests are not automatically retried. Alignment polling stops after ten minutes and reports the job ID. HTTP errors, failed jobs, empty or truncated transcripts stop the workflow. Audio inputs are limited to 128 MiB; transcript inputs to 1,000,000 UTF-8 bytes in the Python client.
 
 ```sh
 python tests/smoke.py

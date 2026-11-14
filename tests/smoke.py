@@ -40,7 +40,7 @@ class API(BaseHTTPRequestHandler):
                 self.reply({"text": "A fixture transcript"})
         elif self.path.endswith("/speech/align"):
             assert b'name="audio"' in body and b'name="text"' in body
-            self.reply({"job_id": "fixture1"}, 202)
+            self.reply({"job_id": "fixture1", "status": "queued"}, 202)
         elif self.path.endswith("/language/translate"):
             data = json.loads(body)
             assert data["source"] == "ary_Arab" and data["target"] == "eng_Latn"
@@ -53,7 +53,7 @@ class API(BaseHTTPRequestHandler):
         if self.path.endswith("/srt"):
             self.reply(b"1\n00:00:00,000 --> 00:00:01,000\nHello\n", kind="text/plain")
         else:
-            self.reply({"status": "done"})
+            self.reply({"job_id": "fixture1", "status": "done"})
 
 
 server = ThreadingHTTPServer(("127.0.0.1", 0), API)

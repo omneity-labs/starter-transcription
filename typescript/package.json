@@ -6,7 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "start": "node --env-file=../.env src/main.ts",
+    "start": "node src/main.ts",
     "check": "tsc --noEmit",
     "test": "node --test test/*.test.ts"
   },

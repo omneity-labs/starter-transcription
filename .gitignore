@@ -6,3 +6,6 @@ dist/
 output/
 *.wav
 *.srt
+
+!examples/demo/audio.wav
+!examples/demo/captions.srt

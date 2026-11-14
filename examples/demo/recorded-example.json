@@ -1,0 +1,135 @@
+{
+  "source": "Wikitongues / Anass Sedrati",
+  "source_url": "https://commons.wikimedia.org/wiki/File:WIKITONGUES-_Anass_speaking_Moroccan_Arabic.webm",
+  "license": "CC BY-SA 4.0",
+  "original_range": [
+    25.0,
+    30.6
+  ],
+  "clip": "sawtitles-real-demo.mp4",
+  "duration": 5.600000000000001,
+  "words": [
+    {
+      "word": "وفي",
+      "index": 35,
+      "start": 0.051,
+      "end": 0.251
+    },
+    {
+      "word": "نفس",
+      "index": 36,
+      "start": 0.271,
+      "end": 0.431
+    },
+    {
+      "word": "الوقت",
+      "index": 37,
+      "start": 0.431,
+      "end": 0.771
+    },
+    {
+      "word": "قلنا",
+      "index": 38,
+      "start": 0.992,
+      "end": 1.212
+    },
+    {
+      "word": "نصوروا",
+      "index": 39,
+      "start": 1.232,
+      "end": 1.532
+    },
+    {
+      "word": "في",
+      "index": 40,
+      "start": 1.572,
+      "end": 1.612
+    },
+    {
+      "word": "هذا",
+      "index": 41,
+      "start": 1.612,
+      "end": 1.712
+    },
+    {
+      "word": "المنظر",
+      "index": 42,
+      "start": 1.712,
+      "end": 2.433
+    },
+    {
+      "word": "هذا",
+      "index": 43,
+      "start": 2.433,
+      "end": 2.593
+    },
+    {
+      "word": "هنايا",
+      "index": 44,
+      "start": 2.613,
+      "end": 2.913
+    },
+    {
+      "word": "مع",
+      "index": 45,
+      "start": 3.013,
+      "end": 3.093
+    },
+    {
+      "word": "البرد",
+      "index": 46,
+      "start": 3.093,
+      "end": 3.454
+    },
+    {
+      "word": "والاجواء",
+      "index": 47,
+      "start": 3.474,
+      "end": 4.134
+    },
+    {
+      "word": "شوية",
+      "index": 48,
+      "start": 4.174,
+      "end": 4.334
+    },
+    {
+      "word": "استوائية",
+      "index": 49,
+      "start": 4.334,
+      "end": 4.835
+    },
+    {
+      "word": "بالنسبة",
+      "index": 50,
+      "start": 4.875,
+      "end": 5.195
+    },
+    {
+      "word": "لينا",
+      "index": 51,
+      "start": 5.235,
+      "end": 5.435
+    }
+  ],
+  "cues": [
+    {
+      "start": 0.051,
+      "end": 1.212,
+      "text": "وفي نفس الوقت قلنا"
+    },
+    {
+      "start": 1.232,
+      "end": 2.913,
+      "text": "نصوروا في هذا المنظر هذا هنايا"
+    },
+    {
+      "start": 3.013,
+      "end": 5.435,
+      "text": "مع البرد والاجواء شوية استوائية بالنسبة لينا"
+    }
+  ],
+  "transcription": "Daktilo recorded output",
+  "timing": "Sawalign recorded output",
+  "edit_demonstration": "Adjust caption line breaks / punctuation. Do not invent a transcription error."
+}

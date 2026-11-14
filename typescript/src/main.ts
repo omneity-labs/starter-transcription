@@ -1,10 +1,11 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, stat } from "node:fs/promises";
 import { Sawalni } from "./client.ts";
 import { parseArgs } from "node:util";
 import { translateText, translateSrt } from "./translation.ts";
 const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: {
+    "transcript-output": { type: "string" },
     source: { type: "string", default: "ary_Arab" },
     target: { type: "string" },
     "translation-output": { type: "string" },
@@ -21,6 +22,8 @@ if (
     "Usage: npm start -- transcribe|subtitles|translate audio.wav [--source ary_Arab --target eng_Latn] OR align audio.wav transcript.txt [output.srt] [--target eng_Latn]",
   );
 }
+if ((await stat(path)).size > 128 * 1024 * 1024) throw new Error("Audio recording exceeds128MiB");
+if (transcriptPath && mode === "align" && (await stat(transcriptPath)).size > 1024 * 1024) throw new Error("Transcript exceeds1MiB");
 const client = new Sawalni(),
   audio = await readFile(path);
 const form = () => {
@@ -36,6 +39,9 @@ if (mode !== "align") {
     await client.request("speech/transcribe", { method: "POST", body })
   ).json();
   text = result.text;
+  if (typeof text !== "string" || !text.trim()) throw new Error("Transcription returned no text");
+  if (result.truncated || result.segments?.some((x: {truncated?:boolean}) => x.truncated)) throw new Error("Transcription was truncated; use a shorter audio recording");
+  if (values["transcript-output"]) await writeFile(values["transcript-output"], text);
   console.log(text);
 }
 if (["transcribe", "translate"].includes(mode) && values.target) {

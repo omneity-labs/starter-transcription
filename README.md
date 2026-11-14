@@ -1,74 +1,83 @@
-# Daktilo transcription + Sawalign alignment
+# Audio recording → transcript → subtitles
 
-Editable source in **[python/src](python/src)** and **[typescript/src](typescript/src)**. Pick either language. No generated bundle is needed.
+Python and TypeScript examples for [Sawalni API](https://api.sawalni.com). Daktilo recognizes the words in an audio recording. Sawalign places a transcript against that audio and exports timed subtitles.
 
-## Setup
+## Python
 
-Create an API key at https://api.sawalni.com. Enable the models used below and add credits. Requests consume credits.
-
-```sh
-cp .env.example .env
-# Edit .env and set SAWALNI_API_KEY.
-```
-
-### Python 3.11+
+Use Python 3.11+ and your own audio recording:
 
 ```sh
-cd python
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -r requirements.txt
-set -a; . ../.env; set +a
-python src/main.py subtitles recording.wav
+pip install -r python/requirements.txt
+export SAWALNI_API_KEY="your-key"
+python python/src/main.py transcribe interview.wav --transcript-output transcript.txt
 ```
 
-### TypeScript / Node.js 24+
+Open `transcript.txt` and review the words. Then align the reviewed text:
+
+```sh
+python python/src/main.py align interview.wav --text transcript.txt --output captions.srt
+```
+
+Use the same audio recording for both steps. Alignment times the text you supply; it does not correct recognition errors.
+
+## TypeScript
+
+Use Node 24+:
 
 ```sh
 cd typescript
 npm ci
+export SAWALNI_API_KEY="your-key"
+npm start -- transcribe ../interview.wav --transcript-output transcript.txt
+# Review transcript.txt, then:
+npm start -- align ../interview.wav transcript.txt captions.srt
+```
+
+Both entry points accept your file paths. `SAWALNI_API_KEY` comes from the environment; the scripts do not load `.env` automatically. Create a key and enable model access at [api.sawalni.com](https://api.sawalni.com). Live requests use API credits.
+
+## How it works
+
+![Transcription and subtitle workflow](docs/architecture.svg)
+
+The transcribe command sends audio to `POST /v1/speech/transcribe` with `model=daktilo`. The align command sends audio and text to `POST /v1/speech/align`, polls the returned job, and downloads SRT when it is done. Credentials stay in your terminal or server process.
+
+## Try the same example as the walkthrough
+
+No key needed to inspect the saved result:
+
+```sh
+python3 examples/preview.py
+```
+
+`examples/demo/` contains a real Darija audio excerpt, transcript, reviewed text and SRT. Play `audio.wav`, inspect the text and open `captions.srt`. [Audio source and license](examples/demo/README.md).
+
+To run it live, pass `examples/demo/audio.wav` to the same commands above. Saved text/timings are excerpts from the longer recorded run; a new request can return different results.
+
+## Other commands
+
+For a quick draft without a review step:
+
+```sh
+python python/src/main.py subtitles interview.wav --output draft.srt
+```
+
+For translated text or captions, add `--source ary_Arab --target eng_Latn` to the existing translation commands. See [translation examples](docs/translation.md). Translation is optional; the core workflow above keeps the source language.
+
+## Files and checks
+
+- `python/src/main.py`, `typescript/src/main.ts`: CLI workflows to adapt.
+- `python/src/client.py`, `typescript/src/client.ts`: HTTP transport.
+- `examples/demo/`: saved demonstration.
+
+Requests are not automatically retried. Alignment polling stops after ten minutes and reports the job ID. HTTP errors, failed jobs, empty or truncated transcripts stop the workflow. Audio inputs are limited to 128 MiB; transcript inputs to 1 MiB.
+
+```sh
+python tests/smoke.py
+cd typescript
+npm test
 npm run check
-npm start -- subtitles recording.wav
 ```
 
-## Extend it
-
-Edit `src/main` for the entry point and `src/client` for API transport. The key stays in the backend process. Requests have a 120-second timeout. HTTP errors stop the flow. These are local developer starters. Add authentication, rate limits, persistence and deployment settings before exposing a service publicly.
-
-API reference: https://api.sawalni.com/docs
-
-## Workflows
-
-- **Transcribe**: meeting notes, interviews and searchable recordings. Runs Daktilo and prints text.
-- **Align**: timing for an existing reviewed transcript, dubbing scripts or read-along content. Runs Sawalign with `--text transcript.txt` (Python), or `align audio.wav transcript.txt` (TypeScript).
-- **Subtitles**: runs Daktilo, then submits its transcript to Sawalign and saves SRT. Review recognition errors before publishing. Use `align` with corrected text for final timing.
-
-Alignment is asynchronous. The source polls pending/processing states, checks failures, and downloads SRT only when done. Polling stops after ten minutes and reports the job ID. Preserve that ID to resume later. Set Python `--output captions.srt`; the TypeScript align command accepts output as the fourth argument. The starter uses the API's 128 MB audio and 1 MB transcript limits; validate uploads in your application before sending them.
-
-Run `python tests/smoke.py` from the repository root with Python dependencies installed and Node.js 24 on PATH. It checks both languages against a local HTTP fixture. It does not call the paid API.
-
-## Translate transcripts and subtitles with Tarjamli
-
-Translate a recording into English after transcription:
-
-```sh
-# Python (from python/)
-python src/main.py translate recording.wav --source ary_Arab --target eng_Latn
-# TypeScript (from typescript/)
-npm start -- translate recording.wav --source ary_Arab --target eng_Latn
-```
-
-Both commands save `translated.txt`. Use `--translation-output path.txt` to choose the file.
-
-Generate source-language and translated subtitles:
-
-```sh
-# Python
-python src/main.py subtitles recording.wav --source ary_Arab --target eng_Latn
-# TypeScript
-npm start -- subtitles recording.wav --source ary_Arab --target eng_Latn
-```
-
-Both save `output.srt` and `translated.srt`. Translation keeps each source cue number and timestamp. Sawalign aligns the original transcript to the source audio; the translated text is not aligned as if it were spoken in that audio. Review the translation, line breaks and reading speed before publishing. Cue-by-cue translation can lose context across cues. For best results, correct the source transcript and use `align` with `--target`.
-
-Set `--source` to the actual spoken language. It defaults to `ary_Arab` (Moroccan Arabic). Target examples: `eng_Latn` English, `fra_Latn` French, `shi_Latn` Tachelhit (Latin), `zgh_Tfng` Standard Moroccan Amazigh (Tifinagh). Tarjamli needs model access and uses credits in addition to transcription and alignment.
+The smoke test uses a local HTTP fixture and makes no paid requests. [API reference](https://api.sawalni.com/docs) · [MIT code license](LICENSE).

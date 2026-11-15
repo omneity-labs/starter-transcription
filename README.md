@@ -1,5 +1,7 @@
 # Timed captions with Sawalign
 
+[**Read the example guide →**](https://api.sawalni.com/examples/darija-captions) See the real audio excerpt, reviewed transcript, word timings, and downloadable captions.
+
 Python uses [Daktilo](https://pypi.org/project/daktilo/) for transcription and [Sawalign](https://pypi.org/project/sawalign/) for alignment. TypeScript calls the same endpoints directly. Both use [Sawalni API](https://api.sawalni.com). Daktilo recognizes the words in an audio recording. Sawalign places a transcript against that audio and exports timed subtitles.
 
 ```sh

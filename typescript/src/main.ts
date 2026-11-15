@@ -1,4 +1,5 @@
 import { readFile, writeFile, stat } from "node:fs/promises";
+import { prepareAudio } from "./media.ts";
 import { Sawalni } from "./client.ts";
 import { parseArgs } from "node:util";
 import { translateText, translateSrt } from "./translation.ts";
@@ -19,16 +20,16 @@ if (
   (mode === "translate" && !values.target)
 ) {
   throw new Error(
-    "Usage: npm start -- transcribe|subtitles|translate audio.wav [--source ary_Arab --target eng_Latn] OR align audio.wav transcript.txt [output.srt] [--target eng_Latn]",
+    "Usage: npm start -- transcribe|subtitles|translate media-file [--source ary_Arab --target eng_Latn] OR align media-file transcript.txt [output.srt] [--target eng_Latn]",
   );
 }
-if ((await stat(path)).size > 128 * 1024 * 1024) throw new Error("Audio recording exceeds128MiB");
 if (transcriptPath && mode === "align" && (await stat(transcriptPath)).size > 1024 * 1024) throw new Error("Transcript exceeds1MiB");
-const client = new Sawalni(),
-  audio = await readFile(path);
+const prepared = await prepareAudio(path);
+try {
+const client = new Sawalni(), audio = prepared.audio;
 const form = () => {
   const f = new FormData();
-  f.append("audio", new Blob([audio]), path.split("/").pop()!);
+  f.append("audio", new Blob([audio]), "audio.wav");
   return f;
 };
 let text = mode === "align" ? await readFile(transcriptPath, "utf8") : "";
@@ -85,4 +86,8 @@ if (["align", "subtitles"].includes(mode)) {
   }
   if (!done)
     throw new Error(`Alignment timed out; resume polling job ${job_id}`);
+}
+
+} finally {
+  await prepared.dispose();
 }

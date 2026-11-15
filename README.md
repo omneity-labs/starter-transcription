@@ -21,39 +21,49 @@ sawalign align interview.wav --text transcript.txt --output captions.srt
 
 Use a transcript that matches the speech, including language switches. For Latin-script Darija (often called Arabizi), keep spelling consistent and review the resulting word timings. There is no need to translate it into English. Alignment quality can vary by language, accent and audio quality, particularly beyond the core languages.
 
+## Audio and video input
+
+Pass a local audio or video file directly to either starter. Common inputs include WAV, MP3, M4A, FLAC, OGG, MP4, MOV, MKV and WebM. Decoder support depends on your FFmpeg build. Install [FFmpeg](https://ffmpeg.org/download.html), then check `ffmpeg -version`.
+
+Both starters select the first audio track and convert it locally to mono 16 kHz PCM WAV. Only that prepared audio is uploaded. The original file is unchanged. A temporary directory holds the WAV and is removed after success or failure. Normal process termination runs cleanup; a forced kill can leave temporary files.
+
+The starter preserves the media timeline, including an initial audio delay. Use the same unchanged source for transcription and alignment. Files with no audio track or an unsupported decoder fail before an API request. Choose the intended track externally if the first track is not suitable. Local file paths are accepted; remote URLs are not.
+
+The 128 MiB upload limit applies to prepared audio, not to the video container. Prepared audio must be at most 30 minutes. Longer input is rejected, not silently shortened. Conversion stops after a five-minute timeout. Split longer media first. The standalone `sawalign` package command above does not use this starter's conversion helper.
+
 ## Python
 
 This starter pins `daktilo==0.1.1` and `sawalign==0.1.2`.
 
-Use Python 3.11+ and your own audio recording:
+Use Python 3.11+, FFmpeg on PATH, and your own audio or video file:
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r python/requirements.txt
 export SAWALNI_API_KEY="your-key"
-python python/src/main.py transcribe interview.wav --transcript-output transcript.txt
+python python/src/main.py transcribe interview.mp4 --transcript-output transcript.txt
 ```
 
 Open `transcript.txt` and review the words. Then align the reviewed text:
 
 ```sh
-python python/src/main.py align interview.wav --text transcript.txt --output captions.srt
+python python/src/main.py align interview.mp4 --text transcript.txt --output captions.srt
 ```
 
-Use the same audio recording for both steps. Alignment times the text you supply; it does not correct recognition errors.
+Use the same media file for both steps. Alignment times the text you supply; it does not correct recognition errors.
 
 ## TypeScript
 
-Use Node 24+:
+Use Node 24+ and FFmpeg on PATH:
 
 ```sh
 cd typescript
 npm ci
 export SAWALNI_API_KEY="your-key"
-npm start -- transcribe ../interview.wav --transcript-output transcript.txt
+npm start -- transcribe ../interview.mp4 --transcript-output transcript.txt
 # Review transcript.txt, then:
-npm start -- align ../interview.wav transcript.txt captions.srt
+npm start -- align ../interview.mp4 transcript.txt captions.srt
 ```
 
 Both entry points accept your file paths. `SAWALNI_API_KEY` comes from the environment; the scripts do not load `.env` automatically. Create a key and enable model access at [api.sawalni.com](https://api.sawalni.com). Live requests use API credits.
@@ -81,7 +91,7 @@ To run it live, pass `examples/demo/audio.wav` to the same commands above. Saved
 For a quick draft without a review step:
 
 ```sh
-python python/src/main.py subtitles interview.wav --output draft.srt
+python python/src/main.py subtitles interview.mp4 --output draft.srt
 ```
 
 For translated text or captions, add `--source ary_Arab --target eng_Latn` to the existing translation commands. See [translation examples](docs/translation.md). Translation is optional; the core workflow above keeps the source language.
@@ -89,12 +99,14 @@ For translated text or captions, add `--source ary_Arab --target eng_Latn` to th
 ## Files and checks
 
 - `python/src/main.py`, `typescript/src/main.ts`: CLI workflows to adapt.
+- `python/src/media.py`, `typescript/src/media.ts`: local FFmpeg extraction and cleanup.
 - `python/src/client.py`, `typescript/src/client.ts`: HTTP transport.
 - `examples/demo/`: saved demonstration.
 
-Requests are not automatically retried. Alignment polling stops after ten minutes and reports the job ID. HTTP errors, failed jobs, empty or truncated transcripts stop the workflow. Audio inputs are limited to 128 MiB; transcript inputs to 1,000,000 UTF-8 bytes in the Python client.
+Requests are not automatically retried. Alignment polling stops after ten minutes and reports the job ID. HTTP errors, failed jobs, empty or truncated transcripts stop the workflow. Prepared audio uploads are limited to 128 MiB and 30 minutes; transcript inputs to 1,000,000 UTF-8 bytes in the Python client.
 
 ```sh
+python tests/media.py
 python tests/smoke.py
 cd typescript
 npm test

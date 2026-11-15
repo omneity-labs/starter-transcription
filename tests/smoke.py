@@ -10,6 +10,7 @@ node = shutil.which("node")
 assert node, "Install Node.js 24 or newer"
 python = sys.executable
 seen = []
+return_empty = False
 
 
 class API(BaseHTTPRequestHandler):
@@ -34,7 +35,7 @@ class API(BaseHTTPRequestHandler):
                 and b'name="model"' in body
                 and b"daktilo" in body
             )
-            if b'filename="empty.wav"' in body:
+            if return_empty:
                 self.reply({"text": ""})
             else:
                 self.reply({"text": "A fixture transcript"})
@@ -100,7 +101,9 @@ with tempfile.TemporaryDirectory() as folder:
             empty = folder / "empty.wav"; empty.write_bytes(audio.read_bytes())
             cmd = [python, "src/main.py"] if lang == "python" else [node, "src/main.ts"]
             before = len(seen)
+            return_empty = True
             failed = subprocess.run(cmd + ["subtitles", str(empty)], cwd=cwd, env=env, capture_output=True, text=True, timeout=30)
+            return_empty = False
             assert failed.returncode != 0 and "no text" in failed.stderr
             assert not any("/speech/align" in p for p in seen[before:])
             output = folder / f"{lang}.srt"
@@ -147,6 +150,17 @@ with tempfile.TemporaryDirectory() as folder:
             )
             assert "Translated fixture" in translated_srt.read_text()
             (cwd / "output.srt").unlink()
+            # Exercise real containers through each CLI and the local API fixture.
+            for suffix in ["mp3", "mp4", "webm"]:
+                media = folder / f"clip.{suffix}"
+                subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-i", str(audio), str(media)], check=True)
+                assert "fixture transcript" in run(["transcribe", str(media)])
+            silent = folder / "silent.mp4"
+            subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "color=size=16x16:duration=0.1", "-an", str(silent)], check=True)
+            before = len(seen)
+            failed = subprocess.run(cmd + ["transcribe", str(silent)], cwd=cwd, env=env, capture_output=True, text=True, timeout=30)
+            assert failed.returncode != 0 and "audio track" in failed.stderr
+            assert len(seen) == before, "Invalid media must fail before an API request"
             print("PASS", repo, lang)
 server.shutdown()
 print("PASS HTTP fixture workflows for", repo_root.name)
